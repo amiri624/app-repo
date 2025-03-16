@@ -1,0 +1,49 @@
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  DOCKER_REGISTRY: docker.io
+  DOCKER_USERNAME: yourusername
+  IMAGE_NAME: $DOCKER_USERNAME/python-app
+
+test:
+  stage: test
+  image: python:3.9-slim
+  script:
+    - pip install -r app/requirements.txt pytest
+    - pytest app/tests/
+
+build:
+  stage: build
+  image: docker:20
+  services:
+    - docker:dind
+  script:
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+    - docker build -t $IMAGE_NAME:$CI_COMMIT_SHA .
+    - docker push $IMAGE_NAME:$CI_COMMIT_SHA
+
+deploy_stage:
+  stage: deploy
+  image: yourusername/devops-tools:latest  # ایمیجی که توی infra-repo می‌سازیم
+  environment:
+    name: staging
+  script:
+    - echo "$KUBE_CONFIG" > kubeconfig
+    - export KUBECONFIG=kubeconfig
+    - sed -i "s/latest/$CI_COMMIT_SHA/" k8s/deployment.yml
+    - kubectl apply -f k8s/ --namespace=staging
+
+deploy_prod:
+  stage: deploy
+  image: yourusername/devops-tools:latest
+  environment:
+    name: production
+  when: manual
+  script:
+    - echo "$KUBE_CONFIG" > kubeconfig
+    - export KUBECONFIG=kubeconfig
+    - sed -i "s/latest/$CI_COMMIT_SHA/" k8s/deployment.yml
+    - kubectl apply -f k8s/ --namespace=production
