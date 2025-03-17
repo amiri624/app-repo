@@ -5,7 +5,7 @@ stages:
 
 variables:
   DOCKER_REGISTRY: docker.io
-  DOCKER_USERNAME: yourusername
+  DOCKER_USERNAME: meisam #yourusername
   IMAGE_NAME: $DOCKER_USERNAME/python-app
 
 test:
